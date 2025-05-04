@@ -2,51 +2,64 @@ name: CI
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   pull_request:
-    branches:
-      - main
+    branches: [ main ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
-    services:
-      db:
-        image: postgres:15
-        env:
-          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U ${{ secrets.POSTGRES_USER }} \
-                        -d ${{ secrets.POSTGRES_DB }}"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     steps:
-      - name: Check out code
-        uses: actions/checkout@v4
+      # 1. Check out your code
+      - uses: actions/checkout@v4
 
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: 1.24
-
-      - name: Run tests
-        env:
-          DATABASE_URL: >-
-            postgres://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}
-            @localhost:5432/${{ secrets.POSTGRES_DB }}?sslmode=disable
+      # 2. Write a .env file from your GitHub secrets
+      - name: Generate .env
         run: |
-          until pg_isready -h localhost -p 5432 \
-            -U "${{ secrets.POSTGRES_USER }}" \
-            -d "${{ secrets.POSTGRES_DB }}"; do
+          cat > .env <<EOF
+          POSTGRES_USER=${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB=${{ secrets.POSTGRES_DB }}
+          DATABASE_URL=postgres://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432/${{ secrets.POSTGRES_DB }}?sslmode=disable
+          EOF
+
+      # 3. Install Docker Compose (if needed)
+      - name: Install docker-compose
+        run: |
+          sudo curl -L "https://github.com/docker/compose/releases/download/v2.14.2/docker-compose-$(uname -s)-$(uname -m)" \
+            -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+
+      # 4. Bring up Postgres via Docker Compose
+      - name: Start Postgres
+        run: |
+          # use only the db service
+          docker-compose up -d db
+
+      # 5. Wait for Postgres to become healthy
+      - name: Wait for Postgres
+        env:
+          PGPASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+        run: |
+          until pg_isready -h localhost -p 5432 -U "${{ secrets.POSTGRES_USER }}" -d "${{ secrets.POSTGRES_DB }}"; do
             echo "Waiting for Postgres..."
             sleep 2
           done
+
+      # 6. Set up Go and run tests
+      - name: Set up Go & run tests
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24'
+      - name: Test
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+          PORT: 8080
+        run: |
+          go vet ./...
           go test ./... -timeout 60s -v
+
+      # 7. (Optional) Validate compose file syntax
+      - name: Validate Docker Compose
+        run: docker-compose config
