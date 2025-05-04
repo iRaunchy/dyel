@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/iraunchy/dyel/db"
 	"github.com/stretchr/testify/assert"
@@ -233,6 +234,7 @@ func TestUpdateProgram_Error(t *testing.T) {
 		"days":      []db.Day{},
 	})
 
+	// wrap Update to always fail
 	repo := &mockRepo{
 		UpdateFn: func(ctx context.Context, p *db.Program) (*db.Program, error) {
 			return nil, errors.New("update failed")
@@ -243,12 +245,16 @@ func TestUpdateProgram_Error(t *testing.T) {
 	router := gin.New()
 	h.RegisterRoutes(router)
 
-	req := httptest.NewRequest(http.MethodPut, "/api/v1/programs/doesnt-matter", bytes.NewReader(bodyBytes))
+	validID := "00000000-0000-0000-0000-000000000000"
+	url := fmt.Sprintf("/api/v1/programs/%s", validID)
+	req := httptest.NewRequest(http.MethodPut, url, bytes.NewReader(bodyBytes))
 	req.Header.Set("Content-Type", "application/json")
+
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
+
 	var errResp map[string]string
 	_ = json.Unmarshal(w.Body.Bytes(), &errResp)
 	assert.Contains(t, errResp["error"], "update failed")

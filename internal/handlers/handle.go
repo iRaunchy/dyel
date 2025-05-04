@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -25,7 +24,6 @@ func HandleJSON[T any, R any](
 ) {
 	in, err := binder(c)
 	if err != nil {
-		fmt.Printf("binder error = %v\n", err)
 		httpresp.Error(c, http.StatusBadRequest, err)
 		return
 	}
