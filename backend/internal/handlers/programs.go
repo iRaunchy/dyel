@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/iraunchy/dyel/db"
+	"github.com/iraunchy/dyel/backend/db"
 )
 
 func (h *Handler) CreateProgram(c *gin.Context) {

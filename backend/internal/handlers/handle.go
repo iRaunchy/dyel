@@ -2,10 +2,10 @@ package handlers
 
 import (
 	"context"
+	httpresp "github.com/iraunchy/dyel/backend/internal/http"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	httpresp "github.com/iraunchy/dyel/internal/http"
 )
 
 // BinderFn is any function that reads from gin.Context and returns

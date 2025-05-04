@@ -2,10 +2,10 @@ package main
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/iraunchy/dyel/db"
-	"github.com/iraunchy/dyel/internal/config"
-	"github.com/iraunchy/dyel/internal/handlers"
-	"github.com/iraunchy/dyel/internal/repos"
+	"github.com/iraunchy/dyel/backend/db"
+	"github.com/iraunchy/dyel/backend/internal/config"
+	"github.com/iraunchy/dyel/backend/internal/handlers"
+	"github.com/iraunchy/dyel/backend/internal/repos"
 	"log"
 )
 

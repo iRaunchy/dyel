@@ -2,6 +2,8 @@ services:
   db:
     image: postgres:15
     restart: always
+    env_file:
+      - .env
     environment:
       POSTGRES_USER: "${POSTGRES_USER}"
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
@@ -11,13 +13,15 @@ services:
     ports:
       - "5432:5432"
 
-  app:
-    build: .
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     restart: always
     env_file:
-      - .env            # so your Go service sees DATABASE_URL & PORT
+      - .env
     ports:
-      - "80:8080"
+      - "8080:8080"
     depends_on:
       - db
 

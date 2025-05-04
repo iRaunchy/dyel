@@ -1,6 +1,6 @@
 package handlers
 
-import "github.com/iraunchy/dyel/db"
+import "github.com/iraunchy/dyel/backend/db"
 
 // ListProgramsInput is empty because GET /programs takes no payload.
 type ListProgramsInput struct{}

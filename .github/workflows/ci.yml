@@ -2,63 +2,67 @@ name: Pre-merge
 
 on:
   pull_request:
-    branches:
-      - main
+    branches: [ main ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Check out your code
+      # 1) Check out your code
       - uses: actions/checkout@v4
 
-      # 2. Write a .env file from your GitHub secrets
-      - name: Generate .env
-        run: |
-          cat > .env <<EOF
-          POSTGRES_USER=${{ secrets.POSTGRES_USER }}
-          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
-          POSTGRES_DB=${{ secrets.POSTGRES_DB }}
-          DATABASE_URL=postgres://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432/${{ secrets.POSTGRES_DB }}?sslmode=disable
-          EOF
-
-      # 3. Install Docker Compose (if needed)
-      - name: Install docker-compose
-        run: |
-          sudo curl -L "https://github.com/docker/compose/releases/download/v2.14.2/docker-compose-$(uname -s)-$(uname -m)" \
-            -o /usr/local/bin/docker-compose
-          sudo chmod +x /usr/local/bin/docker-compose
-
-      # 4. Bring up Postgres via Docker Compose
+      # 2) Install Docker (already available) and spin up Postgres with secrets
       - name: Start Postgres
         run: |
-          # use only the db service
-          docker-compose up -d db
+          docker run -d \
+            --name ci-postgres \
+            -e POSTGRES_USER='${{ secrets.POSTGRES_USER }}' \
+            -e POSTGRES_PASSWORD='${{ secrets.POSTGRES_PASSWORD }}' \
+            -e POSTGRES_DB='${{ secrets.POSTGRES_DB }}' \
+            -p 5432:5432 \
+            postgres:15
 
-      # 5. Wait for Postgres to become healthy
+      # 3) Wait for Postgres to be ready
       - name: Wait for Postgres
-        env:
-          PGPASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
         run: |
-          until pg_isready -h localhost -p 5432 -U "${{ secrets.POSTGRES_USER }}" -d "${{ secrets.POSTGRES_DB }}"; do
+          until pg_isready -h localhost -p 5432 \
+            -U "${{ secrets.POSTGRES_USER }}" \
+            -d "${{ secrets.POSTGRES_DB }}"; do
             echo "Waiting for Postgres..."
             sleep 2
           done
 
-      # 6. Set up Go and run tests
-      - name: Set up Go & run tests
+      # 4) Set up Go
+      - name: Set up Go
         uses: actions/setup-go@v4
         with:
           go-version: '1.24'
-      - name: Test
+
+      # 5) Cache your Go modules
+      - name: Cache Go modules
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('backend/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      # 6) Run vet & tests
+      - name: Vet & Test
+        working-directory: backend
         env:
-          DATABASE_URL: ${{ env.DATABASE_URL }}
+          DATABASE_URL: |
+            postgres://${{ secrets.POSTGRES_USER }}:
+            ${{ secrets.POSTGRES_PASSWORD }}@
+            localhost:5432/${{ secrets.POSTGRES_DB }}?sslmode=disable
           PORT: 8080
         run: |
           go vet ./...
           go test ./... -timeout 60s -v
 
-      # 7. (Optional) Validate compose file syntax
-      - name: Validate Docker Compose
-        run: docker-compose config
+      # 7) (Optional) Tear down Postgres
+      - name: Stop Postgres
+        run: docker stop ci-postgres
