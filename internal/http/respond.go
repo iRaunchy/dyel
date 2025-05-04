@@ -6,7 +6,7 @@ import (
 )
 
 // JSON writes any object at the given status code.
-func JSON(c *gin.Context, code int, obj interface{}) {
+func JSON(c *gin.Context, code int, obj any) {
 	c.JSON(code, obj)
 }
 
