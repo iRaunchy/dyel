@@ -1,0 +1,38 @@
+# Binaries
+/bin/
+/*.exe
+/*.exe~
+/*.dll
+/*.so
+/*.dylib
+
+# Test binaries
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Vendor directory (if you ever vendor dependencies)
+/vendor/
+
+# Go build cache (in your GOPATH)
+/pkg/
+
+# Environment files
+.env
+
+# SQLite database file (if you stick with SQLite for local dev)
+*.db
+dyel.db
+
+# IDE/editor files
+.idea/
+.vscode/
+*.swp
+*~
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db.idea/
