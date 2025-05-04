@@ -1,10 +1,9 @@
-name: CI
+name: Pre-merge
 
 on:
-  push:
-    branches: [ main ]
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
   build:
