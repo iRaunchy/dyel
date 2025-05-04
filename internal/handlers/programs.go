@@ -1,92 +1,82 @@
 package handlers
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/iraunchy/dyel/db"
-	httpresp "github.com/iraunchy/dyel/internal/http"
 )
 
-// createProgramInput holds the JSON‐binding rules for create & update.
-type createProgramInput struct {
-	Name     string   `json:"name" binding:"required"`
-	SharedBy string   `json:"shared_by" binding:"required"`
-	Days     []db.Day `json:"days" binding:"required"`
-}
-
-func (in *createProgramInput) toDB() *db.Program {
-	return &db.Program{
-		Name:     in.Name,
-		SharedBy: in.SharedBy,
-		Days:     in.Days,
-	}
-}
-
-// CreateProgram handles POST /api/v1/programs
 func (h *Handler) CreateProgram(c *gin.Context) {
-	var in createProgramInput
-	if err := c.ShouldBindJSON(&in); err != nil {
-		httpresp.Error(c, http.StatusBadRequest, err)
-		return
-	}
-
-	prog, err := h.Repo.Create(c.Request.Context(), in.toDB())
-	if err != nil {
-		httpresp.Error(c, http.StatusInternalServerError, err)
-		return
-	}
-
-	httpresp.Created(c, prog)
+	HandleJSON[CreateProgramInput, *db.Program](
+		c,
+		BindJSON[CreateProgramInput],
+		func(ctx context.Context, in CreateProgramInput) (*db.Program, error) {
+			return h.Repo.Create(ctx, in.ToModel())
+		},
+		http.StatusCreated,
+	)
 }
 
 // ListPrograms handles GET /api/v1/programs
 func (h *Handler) ListPrograms(c *gin.Context) {
-	list, err := h.Repo.List(c.Request.Context())
-	if err != nil {
-		httpresp.Error(c, http.StatusInternalServerError, err)
-		return
-	}
-	httpresp.JSON(c, http.StatusOK, list)
+	HandleJSON[ListProgramsInput, []db.Program](
+		c,
+		func(c *gin.Context) (ListProgramsInput, error) {
+			return ListProgramsInput{}, nil
+		},
+		func(ctx context.Context, _ ListProgramsInput) ([]db.Program, error) {
+			return h.Repo.List(ctx)
+		},
+		http.StatusOK,
+	)
 }
 
 // GetProgram handles GET /api/v1/programs/:id
 func (h *Handler) GetProgram(c *gin.Context) {
-	id := c.Param("id")
-	prog, err := h.Repo.Get(c.Request.Context(), id)
-	if err != nil {
-		httpresp.Error(c, http.StatusInternalServerError, err)
-		return
-	}
-	httpresp.JSON(c, http.StatusOK, prog)
+	HandleJSON[GetProgramInput, *db.Program](
+		c,
+		BindURI[GetProgramInput],
+		func(ctx context.Context, in GetProgramInput) (*db.Program, error) {
+			return h.Repo.Get(ctx, in.ID)
+		},
+		http.StatusOK,
+	)
 }
 
 // UpdateProgram handles PUT /api/v1/programs/:id
 func (h *Handler) UpdateProgram(c *gin.Context) {
-	var in createProgramInput
-	if err := c.ShouldBindJSON(&in); err != nil {
-		httpresp.Error(c, http.StatusBadRequest, err)
-		return
-	}
-
-	id := c.Param("id")
-	upd := in.toDB()
-	upd.ID = id
-
-	prog, err := h.Repo.Update(c.Request.Context(), upd)
-	if err != nil {
-		httpresp.Error(c, http.StatusInternalServerError, err)
-		return
-	}
-	httpresp.JSON(c, http.StatusOK, prog)
+	HandleJSON[UpdateProgramInput, *db.Program](
+		c,
+		func(c *gin.Context) (UpdateProgramInput, error) {
+			uri, err := BindURI[UpdateProgramURI](c)
+			if err != nil {
+				return UpdateProgramInput{}, err
+			}
+			body, err := BindJSON[UpdateProgramJSON](c)
+			return uri.Merge(body), err
+		},
+		func(ctx context.Context, in UpdateProgramInput) (*db.Program, error) {
+			return h.Repo.Update(ctx, in.ToModel())
+		},
+		http.StatusOK,
+	)
 }
 
 // DeleteProgram handles DELETE /api/v1/programs/:id
 func (h *Handler) DeleteProgram(c *gin.Context) {
-	id := c.Param("id")
-	if err := h.Repo.Delete(c.Request.Context(), id); err != nil {
-		httpresp.Error(c, http.StatusInternalServerError, err)
-		return
-	}
-	c.Status(http.StatusNoContent)
+	HandleJSON[string, struct{}](
+		c,
+		func(c *gin.Context) (string, error) {
+			return c.Param("id"), nil
+		},
+		func(ctx context.Context, id string) (struct{}, error) {
+			if err := h.Repo.Delete(ctx, id); err != nil {
+				return struct{}{}, err
+			}
+			return struct{}{}, nil
+		},
+		http.StatusNoContent,
+	)
 }

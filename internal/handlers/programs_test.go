@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/iraunchy/dyel/db"
 	"github.com/stretchr/testify/assert"
@@ -180,15 +181,9 @@ func TestListProgram_Success(t *testing.T) {
 func TestUpdateProgram_Success(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	inputPayload := map[string]interface{}{
-		"name":      "Updated Name",
-		"shared_by": "bob@example.com",
-		"days":      []db.Day{},
-	}
-	bodyBytes, _ := json.Marshal(inputPayload)
-
+	validID := "123e4567-e89b-12d3-a456-426614174000"
 	expected := &db.Program{
-		ID:       "uuid-123",
+		ID:       validID,
 		Name:     "Updated Name",
 		SharedBy: "bob@example.com",
 		Days:     []db.Day{},
@@ -196,10 +191,7 @@ func TestUpdateProgram_Success(t *testing.T) {
 
 	repo := &mockRepo{
 		UpdateFn: func(ctx context.Context, p *db.Program) (*db.Program, error) {
-			assert.Equal(t, "uuid-123", p.ID)
-			assert.Equal(t, expected.Name, p.Name)
-			assert.Equal(t, expected.SharedBy, p.SharedBy)
-			assert.NotNil(t, ctx)
+			assert.Equal(t, expected, p)
 			return expected, nil
 		},
 	}
@@ -208,15 +200,28 @@ func TestUpdateProgram_Success(t *testing.T) {
 	router := gin.New()
 	h.RegisterRoutes(router)
 
-	req := httptest.NewRequest(http.MethodPut, "/api/v1/programs/"+expected.ID, bytes.NewReader(bodyBytes))
+	payload := UpdateProgramJSON{
+		Name:     expected.Name,
+		SharedBy: expected.SharedBy,
+		Days:     expected.Days,
+	}
+	bodyBytes, err := json.Marshal(payload)
+	assert.NoError(t, err)
+
+	req := httptest.NewRequest(
+		http.MethodPut,
+		"/api/v1/programs/"+validID,
+		bytes.NewReader(bodyBytes),
+	)
 	req.Header.Set("Content-Type", "application/json")
+
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
+
 	var actual db.Program
-	err := json.Unmarshal(w.Body.Bytes(), &actual)
-	assert.NoError(t, err)
+	assert.NoError(t, json.Unmarshal(w.Body.Bytes(), &actual))
 	assert.Equal(t, expected, &actual)
 }
 
@@ -229,6 +234,7 @@ func TestUpdateProgram_Error(t *testing.T) {
 		"days":      []db.Day{},
 	})
 
+	// wrap Update to always fail
 	repo := &mockRepo{
 		UpdateFn: func(ctx context.Context, p *db.Program) (*db.Program, error) {
 			return nil, errors.New("update failed")
@@ -239,12 +245,16 @@ func TestUpdateProgram_Error(t *testing.T) {
 	router := gin.New()
 	h.RegisterRoutes(router)
 
-	req := httptest.NewRequest(http.MethodPut, "/api/v1/programs/doesnt-matter", bytes.NewReader(bodyBytes))
+	validID := "00000000-0000-0000-0000-000000000000"
+	url := fmt.Sprintf("/api/v1/programs/%s", validID)
+	req := httptest.NewRequest(http.MethodPut, url, bytes.NewReader(bodyBytes))
 	req.Header.Set("Content-Type", "application/json")
+
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
+
 	var errResp map[string]string
 	_ = json.Unmarshal(w.Body.Bytes(), &errResp)
 	assert.Contains(t, errResp["error"], "update failed")

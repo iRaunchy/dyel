@@ -26,8 +26,9 @@ A simple Go + Gin + GORM microservice for managing workout programs, backed by P
 git clone https://github.com/iraunchy/dyel.git
 cd dyel
 cp .env.example .env
-# Edit .env to set your DATABASE_URL, e.g.:
-# DATABASE_URL="postgres://user:password@db:5432/dyeldb?sslmode=disable"
+# Edit .env to set your db credentials, e.g.:
+# POSTGRES_USER=
+# POSTGRES_PASSWORD=
 ```
 
 ### Build and Run
