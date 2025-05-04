@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"github.com/iraunchy/dyel/db"
+	"github.com/iraunchy/dyel/backend/db"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"

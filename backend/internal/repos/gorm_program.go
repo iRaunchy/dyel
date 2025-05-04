@@ -3,7 +3,7 @@ package repos
 import (
 	"context"
 
-	"github.com/iraunchy/dyel/db"
+	"github.com/iraunchy/dyel/backend/db"
 	"gorm.io/gorm"
 )
 

@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"github.com/iraunchy/dyel/internal/repos"
+	"github.com/iraunchy/dyel/backend/internal/repos"
 )
 
 type Handler struct {
