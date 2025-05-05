@@ -4,17 +4,12 @@ import { useRouter } from 'vue-router'
 import {
   NAlert,
   NAvatar,
-  NCard,
   NEmpty,
-  NGrid,
-  NGridItem,
   NPageHeader,
   NSpace,
   NSpin,
-  NTag,
-  NText,
-  NThing
 } from 'naive-ui'
+import { formatDate, getProgramColor, getInitials } from '../utils/utils'
 
 interface Program {
   id: string
@@ -30,44 +25,6 @@ const router = useRouter()
 
 function select(id: string) {
   router.push(`/programs/${id}`)
-}
-
-function formatDate(d: string) {
-  if (!d) return ''
-  const date = new Date(d)
-  const now = new Date()
-  const diffTime = Math.abs(now.getTime() - date.getTime())
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-
-  if (diffDays <= 1) return 'Today'
-  if (diffDays <= 2) return 'Yesterday'
-  if (diffDays <= 7) return `${diffDays} days ago`
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
-}
-
-// Generate a consistent color based on the program name
-function getProgramColor(name: string) {
-  const colors = [
-    '#2080f0', '#18a058', '#f0a020', '#d03050',
-    '#8a2be2', '#1890ff', '#52c41a', '#faad14',
-    '#722ed1', '#eb2f96', '#f5222d', '#fa541c'
-  ]
-  let hash = 0
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash)
-  }
-  hash = Math.abs(hash)
-  return colors[hash % colors.length]
-}
-
-// Get initials from program name for avatar
-function getInitials(name: string) {
-  return name
-      .split(' ')
-      .map(word => word[0])
-      .join('')
-      .toUpperCase()
-      .substring(0, 2)
 }
 
 async function loadPrograms() {
@@ -115,62 +72,59 @@ onMounted(loadPrograms)
         </template>
       </n-empty>
 
-      <n-grid
-          v-else
-          :x-gap="24"
-          :y-gap="24"
-          cols="auto-fit"
-          min-cols-width="280px"
-      >
-        <n-grid-item v-for="program in programs" :key="program.id">
-          <n-card
-              hoverable
-              class="program-card"
-              @click="select(program.id)"
-          >
-            <n-thing>
-              <template #avatar>
-                <n-avatar
-                    round
-                    :style="{ backgroundColor: getProgramColor(program.name) }"
-                >
-                  {{ getInitials(program.name) }}
-                </n-avatar>
-              </template>
+      <div v-else class="programs-grid">
+        <div
+            v-for="program in programs"
+            :key="program.id"
+            class="glass-card"
+            @click="select(program.id)"
+        >
+          <div class="card-content">
+            <div class="card-top">
+              <n-avatar
+                  round
+                  :style="{ backgroundColor: getProgramColor(program.name) }"
+                  class="avatar-glass"
+              >
+                {{ getInitials(program.name) }}
+              </n-avatar>
 
-              <template #header>
-                <n-text class="program-title">{{ program.name }}</n-text>
-              </template>
+              <div class="program-title">{{ program.name }}</div>
+            </div>
 
-              <template #description>
-                <n-space vertical size="small">
-                  <n-space align="center" size="small">
-                    <n-icon size="16">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24">
-                        <path fill="currentColor" d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10s10-4.5 10-10S17.5 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8s8 3.59 8 8s-3.59 8-8 8zm.5-13H11v6l5.2 3.2l.8-1.3l-4.5-2.7V7z"/>
-                      </svg>
-                    </n-icon>
-                    <n-text depth="3" class="program-date">
-                      {{ formatDate(program.created_at || '') }}
-                    </n-text>
-                  </n-space>
+            <div class="card-bottom">
+              <div class="date-info">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" class="time-icon">
+                  <path fill="currentColor" d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10s10-4.5 10-10S17.5 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8s8 3.59 8 8s-3.59 8-8 8zm.5-13H11v6l5.2 3.2l.8-1.3l-4.5-2.7V7z"/>
+                </svg>
+                <span class="program-date">
+                  {{ formatDate(program.created_at || '') }}
+                </span>
+              </div>
 
-                  <n-tag v-if="program.shared_by" size="small">
-                    Shared by {{ program.shared_by }}
-                  </n-tag>
-                </n-space>
-              </template>
-            </n-thing>
-          </n-card>
-        </n-grid-item>
-      </n-grid>
+              <div v-if="program.shared_by" class="shared-info">
+                Shared by {{ program.shared_by }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </n-space>
   </div>
 </template>
 
+<style>
+/* Global styles to ensure text is visible */
+[class*="n-tag__content"] {
+  color: rgba(0, 0, 0, 0.65) !important;
+}
+</style>
+
 <style scoped>
 .program-list {
   width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
 .content-space {
@@ -178,26 +132,140 @@ onMounted(loadPrograms)
   width: 100%;
 }
 
-.program-card {
-  position: relative;
-  overflow: hidden;
-  border-radius: 12px;
-  transition: all 0.3s ease;
-  height: 100%;
+.programs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(275px, 1fr));
+  gap: 24px;
+  width: 100%;
 }
 
-.program-card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+/* For larger screens, limit to 4 cards per row max */
+@media (min-width: 1400px) {
+  .programs-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Adjustments for smaller screens */
+@media (max-width: 600px) {
+  .programs-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.glass-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.7) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.07);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  height: 200px; /* Increased height to fit content */
+}
+
+.glass-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.9),
+      rgba(255, 255, 255, 0.5)
+  );
+  border-radius: 16px 16px 0 0;
+  z-index: 0;
+}
+
+.card-content {
+  position: relative;
+  z-index: 1;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.card-top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 110px; /* Increased height for the top section */
+  overflow: hidden;
+}
+
+.avatar-glass {
+  margin-bottom: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
 }
 
 .program-title {
   font-size: 1.1rem;
   font-weight: 600;
-  line-height: 1.5;
+  line-height: 1.3;
+  color: #000000 !important;
+  text-align: center;
+  word-break: break-word;
+  max-height: 2.6rem; /* Limit to 2 lines */
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  margin: 0; /* Remove default margins */
+}
+
+.card-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-top: auto;
+  min-height: 50px; /* Ensure bottom section has enough room */
+}
+
+.date-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.time-icon {
+  color: rgba(0, 0, 0, 0.6);
 }
 
 .program-date {
   font-size: 0.85rem;
+  color: rgba(0, 0, 0, 0.6) !important;
+}
+
+.shared-info {
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 0.8rem;
+  color: rgba(0, 0, 0, 0.55) !important;
+  text-align: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.glass-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.15);
 }
 </style>
