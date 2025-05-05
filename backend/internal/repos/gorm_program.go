@@ -2,6 +2,7 @@ package repos
 
 import (
 	"context"
+	"github.com/google/uuid"
 
 	"github.com/iraunchy/dyel/backend/db"
 	"gorm.io/gorm"
@@ -18,7 +19,37 @@ func NewGORMProgramRepo(dbConn *gorm.DB) *GORMProgramRepo {
 }
 
 func (r *GORMProgramRepo) Create(ctx context.Context, p *db.Program) (*db.Program, error) {
-	if err := r.DB.WithContext(ctx).Create(p).Error; err != nil {
+	if p.ID == "" {
+		p.ID = uuid.NewString()
+	}
+
+	for di := range p.Days {
+		day := &p.Days[di]
+		if day.ID == "" {
+			day.ID = uuid.NewString()
+		}
+		day.ProgramID = p.ID
+
+		for ei := range day.Exercises {
+			ex := &day.Exercises[ei]
+			if ex.ID == "" {
+				ex.ID = uuid.NewString()
+			}
+			ex.DayID = day.ID
+		}
+	}
+
+	tx := r.DB.WithContext(ctx).Begin()
+	if err := tx.Error; err != nil {
+		return nil, err
+	}
+
+	if err := tx.Create(p).Error; err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	if err := tx.Commit().Error; err != nil {
 		return nil, err
 	}
 	return p, nil
