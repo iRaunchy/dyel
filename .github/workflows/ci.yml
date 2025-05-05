@@ -91,4 +91,4 @@ jobs:
         run: npm test
 
       - name: Build (skip type-checking)
-        run: vite build --mode production
+        run: npx vite build --mode production
