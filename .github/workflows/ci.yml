@@ -5,14 +5,14 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
+  backend:
     runs-on: ubuntu-latest
 
     steps:
       # 1) Check out your code
       - uses: actions/checkout@v4
 
-      # 2) Install Docker (already available) and spin up Postgres with secrets
+      # 2) Install Docker and spin up Postgres with secrets
       - name: Start Postgres
         run: |
           docker run -d \
@@ -39,7 +39,7 @@ jobs:
         with:
           go-version: '1.24'
 
-      # 5) Cache your Go modules
+      # 5) Cache Go modules
       - name: Cache Go modules
         uses: actions/cache@v3
         with:
@@ -66,3 +66,29 @@ jobs:
       # 7) (Optional) Tear down Postgres
       - name: Stop Postgres
         run: docker stop ci-postgres
+
+  frontend:
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: ./frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: './frontend/package-lock.json'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build (skip type-checking)
+        run: npx vite build --mode production
