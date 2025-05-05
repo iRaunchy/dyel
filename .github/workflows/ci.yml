@@ -88,7 +88,7 @@ jobs:
         run: npm install
 
       - name: Run tests
-        run: vitest run --dir tests
+        run: npm test
 
       - name: Build
         run: npm run build
